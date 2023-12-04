@@ -12,7 +12,8 @@ class DB:
 
     # checks if an account with the username exists
     def is_account_exist(self, username):
-        if self.db.accounts.find({'username': username}).count() > 0:
+        user_exists = self.db.accounts.find_one({'username': username})
+        if user_exists is not None:
             return True
         else:
             return False
@@ -24,7 +25,7 @@ class DB:
             "username": username,
             "password": password
         }
-        self.db.accounts.insert(account)
+        self.db.accounts.insert_one(account)
 
 
     # retrieves the password for a given username
@@ -34,7 +35,7 @@ class DB:
 
     # checks if an account with the username online
     def is_account_online(self, username):
-        if self.db.online_peers.find({"username": username}).count() > 0:
+        if self.db.online_peers.find_one({"username": username}).count() > 0:
             return True
         else:
             return False
@@ -47,7 +48,7 @@ class DB:
             "ip": ip,
             "port": port
         }
-        self.db.online_peers.insert(online_peer)
+        self.db.online_peers.insert_one(online_peer)
     
 
     # logs out the user 
