@@ -3,7 +3,7 @@
     ##  Implementation of registry
     ##  150114822 - Eren Ulaş
 '''
-
+import hashlib
 from socket import *
 import threading
 import select
@@ -75,9 +75,10 @@ class ClientThread(threading.Thread):
                     else:
                         # retrieves the account's password, and checks if the one entered by the user is correct
                         retrievedPass = db.get_password(message[1])
+                        new_password = hashlib.sha256(message[2].encode('utf-8')).hexdigest()
                         # if password is correct, then peer's thread is added to threads list
                         # peer is added to db with its username, port number, and ip address
-                        if retrievedPass == message[2]:
+                        if retrievedPass == new_password:
                             self.username = message[1]
                             self.lock.acquire()
                             try:

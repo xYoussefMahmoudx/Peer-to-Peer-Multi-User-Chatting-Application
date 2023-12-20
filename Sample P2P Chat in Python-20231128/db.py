@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-
+import hashlib
 # Includes database operations
 class DB:
 
@@ -21,12 +21,12 @@ class DB:
 
     # registers a user
     def register(self, username, password):
+        encrypted_data = hashlib.sha256(password.encode('utf-8')).hexdigest()
         account = {
             "username": username,
-            "password": password
+            "password": encrypted_data
         }
         self.db.accounts.insert_one(account)
-
 
     # retrieves the password for a given username
     def get_password(self, username):
@@ -35,7 +35,7 @@ class DB:
 
     # checks if an account with the username online
     def is_account_online(self, username):
-        if self.db.online_peers.find_one({"username": username}).count() > 0:
+        if self.db.online_peers.find_one({"username": username}) is not None:
             return True
         else:
             return False
@@ -53,8 +53,8 @@ class DB:
 
     # logs out the user 
     def user_logout(self, username):
-        self.db.online_peers.remove({"username": username})
-    
+        self.db.online_peers.delete_one({"username": username})
+
 
     # retrieves the ip address and the port number of the username
     def get_peer_ip_port(self, username):
