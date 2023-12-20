@@ -1,4 +1,5 @@
 from pymongo import MongoClient
+import hashlib
 from cryptography.fernet import Fernet
 import base64
 # Includes database operations
@@ -22,27 +23,16 @@ class DB:
 
     # registers a user
     def register(self, username, password):
-        custom_key_bytes = b'qwertyuiopasdfghjklzxcvbnmmnbvcx'
-        custom_key = base64.urlsafe_b64encode(custom_key_bytes)
-        cipher = Fernet(custom_key)
-        encoded_data = password.encode()  # Convert string to bytes before encryption
-        encrypted_data = cipher.encrypt(encoded_data)
+        encrypted_data = hashlib.sha256(password.encode('utf-8')).hexdigest()
         account = {
             "username": username,
             "password": encrypted_data
         }
         self.db.accounts.insert_one(account)
 
-
     # retrieves the password for a given username
     def get_password(self, username):
-        custom_key_bytes = b'qwertyuiopasdfghjklzxcvbnmmnbvcx'
-        custom_key = base64.urlsafe_b64encode(custom_key_bytes)
-        cipher = Fernet(custom_key)
-        encrypted_data = self.db.accounts.find_one({"username": username})["password"]
-        decrypted_data = cipher.decrypt(encrypted_data)
-        decrypted_data_string = decrypted_data.decode()
-        return decrypted_data_string
+        return self.db.accounts.find_one({"username": username})["password"]
 
 
     # checks if an account with the username online
