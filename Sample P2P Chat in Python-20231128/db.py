@@ -1,7 +1,5 @@
 from pymongo import MongoClient
 import hashlib
-from cryptography.fernet import Fernet
-import base64
 # Includes database operations
 class DB:
 
