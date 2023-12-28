@@ -60,3 +60,33 @@ class DB:
     def get_peer_ip_port(self, username):
         res = self.db.online_peers.find_one({"username": username})
         return (res["ip"], res["port"])
+    
+     # Create a chat room
+    def create_chat_room(self, room_name):
+        chat_room = {
+            "room_name": room_name,
+            "participants": []
+        }
+        self.db.chat_rooms.insert_one(chat_room)
+
+    # join a chat room
+    def join_chat_room(self, room_name, username):
+        self.db.chat_rooms.update_one(
+            {"room_name": room_name},
+            {"$addToSet": {"participants": username}}
+        )
+     # checks if an account with the username exists
+    def is_chat_room_exist(self, room_name):
+        room_name_exists = self.db.chat_rooms.find_one({'room_name': room_name})
+        if room_name_exists is not None:
+            return True
+        else:
+            return False
+
+    # get participants of a chat room
+    def get_chat_room_participants(self, room_name):
+        participants = ''
+        chat_room_participants = self.db.chat_rooms.find_one({"room_name": room_name})["participants"]
+        for participant in chat_room_participants:
+            participants += participant + " "
+        return participants
