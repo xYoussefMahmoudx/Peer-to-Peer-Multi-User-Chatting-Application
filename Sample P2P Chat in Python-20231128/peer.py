@@ -19,7 +19,7 @@ class PeerServer(threading.Thread):
 
 
     # Peer server initialization
-    def __init__(self, username, peerServerPort):
+    def __init__(self, username, peerServerPort,chatroomName):
         
         threading.Thread.__init__(self)
         
@@ -43,7 +43,10 @@ class PeerServer(threading.Thread):
         # keeps the username of the peer that this peer is chatting with
         self.chattingClientName = None
         # Tracks if the user is in a chat room
-        self.inChatroom = False
+        if chatroomName is not None:
+            self.inChatroom = True
+        else:
+            self.inChatroom = False
 
 
     
@@ -88,17 +91,23 @@ class PeerServer(threading.Thread):
                         inputs.append(connected)
                         # if the user is not chatting, then the ip and the socket of
                         # this peer is assigned to server variables
-                        if self.isChatRequested == 0:     
-                            print(f"{Fore.GREEN}{self.username} is connected from {str(addr)}{Style.RESET_ALL}")
+                        if self.isChatRequested == 0: 
+                            if self.inChatroom is False:
+                                print(f"{Fore.GREEN}{self.username} is connected from {str(addr)}{Style.RESET_ALL}")
                             self.connectedPeerSocket = connected
                             self.connectedPeerIP = addr[0]
                     # if the socket that receives the data is the one that
                     # is used to communicate with a connected peer, then enters here
                     else:
                         # message is received from connected peer
-                        messageReceived = s.recv(1024).decode()
-                        if "GROUP_CHAT " in messageReceived:
-                            print(messageReceived[messageReceived.find("GROUP_CHAT "):])
+                        messageReceived = s.recv(1024).decode() 
+                        startindex =    messageReceived.find("GROUP-CHAT")
+                        if (startindex != -1):
+                            if(len(messageReceived ) != 0):
+                                print(f"{Fore.MAGENTA}{messageReceived}")
+                                continue
+                        #if "GROUP_CHAT " in messageReceived:
+                            #print(messageReceived[messageReceived.find("GROUP_CHAT "):])
                         # logs the received message
                         logging.info(f"{Fore.GREEN}Received from {str(self.connectedPeerIP)} -> {str(messageReceived)}")
                         # if message is a request message it means that this is the receiver side peer server
@@ -143,17 +152,24 @@ class PeerServer(threading.Thread):
                         # if the message received is a quit message ':q',
                         # makes ischatrequested 1 to receive new incoming request messages
                         # removes the socket of the connected peer from the inputs list
-                        elif messageReceived[:2] == ":q":
+                        elif messageReceived[:2] == ":q" and self.inChatroom is False:
                             self.isChatRequested = 0
                             inputs.clear()
                             inputs.append(self.tcpServerSocket)
                             # connected peer ended the chat
-                            if len(messageReceived) == 2:
-                                print(f"{Fore.RED}User you're chatting with ended the chat{Style.RESET_ALL}")
-                                print(f"{Fore.CYAN}Press enter to quit the chat: {Style.RESET_ALL}")
+                            if len(messageReceived) == 2 :
+                                if self.inChatroom is False:
+                                    print(f"{Fore.RED}User you're chatting with ended the chat{Style.RESET_ALL}")
+                                    print(f"{Fore.CYAN}Press enter to quit the chat: {Style.RESET_ALL}")
+                       
+                            
+                            
+                            
+                            
                         # if the message is an empty one, then it means that the
                         # connected user suddenly ended the chat(an error occurred)
-                        elif len(messageReceived) == 0:
+                        # If its in a group chat then it is ok to send an empty message.
+                        elif len(messageReceived) == 0 and self.inChatroom is False:
                             self.isChatRequested = 0
                             inputs.clear()
                             inputs.append(self.tcpServerSocket)
@@ -169,7 +185,7 @@ class PeerServer(threading.Thread):
 # Client side of peer
 class PeerClient(threading.Thread):
     # variable initializations for the client side of the peer
-    def __init__(self, ipToConnect, portToConnect, username, peerServer, responseReceived,msg='None'):
+    def __init__(self, ipToConnect, portToConnect, username, peerServer, responseReceived,msg='None',receiver=None):
         threading.Thread.__init__(self)
         # keeps the ip address of the peer that this will connect
         self.ipToConnect = ipToConnect
@@ -188,18 +204,24 @@ class PeerClient(threading.Thread):
         # keeps if this client is ending the chat or not
         self.isEndingChat = False
         self.msg = msg
+        self.receiver = receiver
   
 
 
     # main method of the peer client thread
     def run(self):
         
-        print(f"{Fore.GREEN}Peer client started...")
+        if self.msg is None:
+            print(f"{Fore.GREEN}Peer client started...")
         # connects to the server of other peer
-        self.tcpClientSocket.connect((self.ipToConnect, self.portToConnect))
+        
+        try:
+            self.tcpClientSocket.connect((self.ipToConnect, self.portToConnect))
+        except:
+            print("UNEXPECTED ERROR - Couldn't connect to user")
         # if the server of this peer is not connected by someone else and if this is the requester side peer client then enters here
         if self.msg is not None:
-            requestMessage = "GROUP-CHAT " + self.username + " : " + self.msg
+            requestMessage = "GROUP-CHAT " + self.username + " : " + self.msg + "\n" + f"{Fore.LIGHTBLUE_EX}{self.receiver}" + " : "
             self.tcpClientSocket.send(requestMessage.encode())
         elif self.peerServer.isChatRequested == 0 and self.responseReceived is None:
             # composes a request message and this is sent to server and then this waits a response message from the server this client connects
@@ -355,7 +377,7 @@ class peerMain:
                     self.loginCredentials = (username, password)
                     self.peerServerPort = peerServerPort
                     # creates the server thread for this peer, and runs it
-                    self.peerServer = PeerServer(self.loginCredentials[0], self.peerServerPort)
+                    self.peerServer = PeerServer(self.loginCredentials[0], self.peerServerPort,self.chatroomName)
                     self.peerServer.start()
                     # hello message is sent to registry
                     self.sendHelloMessage()
@@ -400,12 +422,17 @@ class peerMain:
             elif choice == "7" and self.isOnline:
                 chat_room_name = input(f"{Fore.CYAN}Enter the name of the chat room you want to join: ")
                 self.joinChatRoom(chat_room_name)
-                
-            elif choice == "8" and self.isOnline:
-                msg = input("Enter the message you want to send : ")
-                if self.chatroomUsers is not None:
-                    for user in self.chatroomUsers:
-                        self.initiate_chat(user,msg)
+            
+                while self.inChatroom:
+                    msg = input(f"{Fore.LIGHTBLUE_EX}{username}  " + " : ")
+                    self.chatroomUsers = self.updateChatRoomList(chat_room_name)
+                    if self.chatroomUsers is not None:
+                        for user in self.chatroomUsers:
+                            if msg == ":q":
+                                self.quitChatRoom(username,chat_room_name)
+                            if user != username: # Don't send message to oneself.
+                                self.initiate_chat(user,msg)
+            
                                 
                                  
             # if this is the receiver side then it will get the prompt to accept an incoming request during the main loop
@@ -495,7 +522,8 @@ class peerMain:
         response = self.tcpClientSocket.recv(1024).decode().split()
         logging.info(f"{Fore.GREEN}Received from  {self.registryName}   ->"  .join(response))
         if response[0] == "search-success":
-            print(username + f"{Fore.GREEN} is found successfully...")
+            if self.inChatroom is False:
+                print(username + f"{Fore.GREEN} is found successfully...")
             return response[1]
         elif response[0] == "search-user-not-online":
             print(username +f"{Fore.RED} is not online...")
@@ -527,16 +555,32 @@ class peerMain:
             print(f"{Fore.RED} Chat room not found")
             return 0
         elif response[0] == "chat-room-found":
-            print(f"{Fore.GREEN} Chat room joined successfully\n")
             self.inChatroom = True
             self.chatroomName = room_name
-            self.chat_room_list_thread = threading.Thread(target=self.updateChatRoomList(self.chatroomName))
-            self.chat_room_list_thread.start()
-            print(f"{Fore.MAGENTA} The current users in this chat room are :- \n")
+            print(f"{Fore.GREEN} You have joined the chat room {room_name}")
+            print(f"{Fore.MAGENTA} The current users in this chat room are :")
             for user in (response[1:]):
                 print(f"{Fore.MAGENTA}{user}")  
                 self.chatroomUsers.append(user)
             # Handle Chat Room Joining #  
+            if self.chatroomUsers is not None:
+                for user in self.chatroomUsers:
+                    self.initiate_chat(user,f"{Fore.RED}User {self.loginCredentials[0]} has joined the room{Style.RESET_ALL}")
+    def quitChatRoom(self,username,room_name):
+         # QUITTING CHAT ROOM #
+        if self.chatroomUsers is not None:
+            for user in self.chatroomUsers:
+                self.initiate_chat(user,f"{Fore.RED}User {username} has left the room{Style.RESET_ALL}")
+        message = "QUIT_CHAT_ROOM " + username + " " + room_name
+        self.tcpClientSocket.send(message.encode())
+        response = self.tcpClientSocket.recv(1024).decode().split()
+        if response[0] == "chat-room-quit":
+            print(f"{Fore.RED} You have left the chat room{Style.RESET_ALL}")
+            self.inChatroom = False
+            
+            return 0
+            
+            
             
             
     def initiate_chat(self,username,message):
@@ -546,22 +590,22 @@ class peerMain:
         # main process waits for the client thread to finish its chat
         if searchStatus is not None :
             searchStatus = searchStatus.split(":")
-            self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]) , self.loginCredentials[0], self.peerServer, None,message)
+            self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]) , self.loginCredentials[0], self.peerServer, None,message,username)
             self.peerClient.start()
             self.peerClient.join()
             
     def updateChatRoomList(self, room_name):
-        while self.isOnline:
+        if self.isOnline:
             # Send a request to the registry to get the latest chat room list
             message = "GET_CHAT_ROOM_LIST " + room_name
             self.tcpClientSocket.send(message.encode())
             response = self.tcpClientSocket.recv(1024).decode().split()
         # Process the received chat room list
         if response[0] == "chat-room-list":
-            self.chatroomUsers = response[1:]
+            updatedChatRoomList =  response[1:]
+            return updatedChatRoomList
 
-        # Sleep for a certain period before sending the next request
-        time.sleep(3)  # Sleep for 60 seconds (adjust as needed)   
+        
        
 
             

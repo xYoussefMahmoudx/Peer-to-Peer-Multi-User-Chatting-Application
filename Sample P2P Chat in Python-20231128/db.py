@@ -75,7 +75,7 @@ class DB:
             {"room_name": room_name},
             {"$addToSet": {"participants": username}}
         )
-     # checks if an account with the username exists
+     # checks if chatroom exists
     def is_chat_room_exist(self, room_name):
         room_name_exists = self.db.chat_rooms.find_one({'room_name': room_name})
         if room_name_exists is not None:
@@ -90,3 +90,9 @@ class DB:
         for participant in chat_room_participants:
             participants += participant + " "
         return participants
+    # Remove user from chat room list
+    def remove_chat_room_user(self, room_name, username):
+        self.db.chat_rooms.update_one(
+            {"room_name": room_name},
+            { "$pull" : {"participants" : username}}
+        )

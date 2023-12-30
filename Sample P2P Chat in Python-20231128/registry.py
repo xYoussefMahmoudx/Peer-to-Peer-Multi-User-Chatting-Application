@@ -181,6 +181,11 @@ class ClientThread(threading.Thread):
                     response = "chat-room-list" 
                     response += " " + db.get_chat_room_participants(message[1])
                     self.tcpClientSocket.send(response.encode())
+                # CHAT ROOM QUITTING #
+                elif message[0] == "QUIT_CHAT_ROOM":
+                    response = "chat-room-quit" 
+                    db.remove_chat_room_user(message[2],message[1])
+                    self.tcpClientSocket.send(response.encode())
                     
                         
             except OSError as oErr:
@@ -210,6 +215,7 @@ class UDPServer(threading.Thread):
     def waitHelloMessage(self):
         if self.username is not None:
             db.user_logout(self.username)
+            db.remove_chat_room_user(self.username) # Remove user from any chat rooms they were in.
             if self.username in tcpThreads:
                 del tcpThreads[self.username]
         self.tcpClientSocket.close()
