@@ -124,7 +124,7 @@ class PeerServer(threading.Thread):
                                 # gets the username of the peer sends the chat request message
                                 self.chattingClientName = messageReceived[2]
                                 # prints prompt for the incoming chat request
-                                print(f"{Fore.GREEN}Incoming chat request from {self.chattingClientName} >> {Style.RESET_ALL}")
+                                print(f"{Fore.GREEN + Style.BRIGHT}Incoming chat request from >> {self.chattingClientName} ")
                                 print(f"{Fore.CYAN}Enter OK to accept or REJECT to reject: {Style.RESET_ALL}")
                                 # makes isChatRequested = 1 which means that peer is chatting with someone
                                 self.isChatRequested = 1
@@ -159,7 +159,7 @@ class PeerServer(threading.Thread):
                             # connected peer ended the chat
                             if len(messageReceived) == 2 :
                                 if self.inChatroom is False:
-                                    print(f"{Fore.RED}User you're chatting with ended the chat{Style.RESET_ALL}")
+                                    print(f"{Fore.RED + Style.BRIGHT}User you're chatting with ended the chat{Style.RESET_ALL}")
                                     print(f"{Fore.CYAN}Press enter to quit the chat: {Style.RESET_ALL}")
                        
                             
@@ -354,14 +354,21 @@ class peerMain:
         # as long as the user is not logged out, asks to select an option in the menu
         while choice != "3":
             # menu selection prompt
-            choice = input(f"{Fore.CYAN}Choose: \nCreate account: 1\nLogin: 2\nLogout: 3\nSearch: 4\nStart a chat: 5\nCreate Chat-Room: 6\nJoin Chat-Room: 7\n")
+            print(f"{Fore.CYAN + Style.BRIGHT}Account Options")
+            print(f"{Fore.CYAN}Create account: 1\nLogin: 2\nLogout: 3\nSearch: 4")
+            print(f"{Fore.CYAN + Style.BRIGHT}Chatting Options")
+            print(f"{Fore.CYAN}Start a chat: 5\nCreate Chat-Room: 6\nJoin Chat-Room: 7")
+            choice = input()
             # if choice is 1, creates an account with the username
             # and password entered by the user
             if choice =="1":
                 username = input(f"{Fore.CYAN}username: ")
                 password = input(f"{Fore.CYAN}password: ")
-                
-                self.createAccount(username, password)
+                if (len(password) <= 6):
+                    print(Fore.RED + Style.BRIGHT + "Account Creation Failed:")
+                    print(f"{Fore.RED}Minimum password length must be at least 6 characters")
+                else:
+                    self.createAccount(username, password)
             # if choice is 2 and user is not logged in, asks for the username
             # and the password to login
             elif choice == "2" and not self.isOnline:
@@ -473,9 +480,10 @@ class peerMain:
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info(f"{Fore.GREEN}Received from  {self.registryName}  ->  {response}")
         if response == "join-success":
-            print(f"{Fore.GREEN}Account created...")
+            print(f"{Fore.GREEN + Style.BRIGHT}Account created!")
         elif response == "join-exist":
-            print(f"{Fore.RED}choose another username or login...")
+            print(f"{Fore.RED + Style.BRIGHT}Username already exists:")
+            print(f"{Fore.RED}Choose another username")
 
     # login function
     def login(self, username, password, peerServerPort):
