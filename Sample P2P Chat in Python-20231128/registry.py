@@ -30,8 +30,8 @@ class ClientThread(threading.Thread):
         self.username = None
         self.isOnline = True
         self.udpServer = None
-        
-        
+
+
         # Phase 3
 
         # Print thread start message in green
@@ -43,7 +43,7 @@ class ClientThread(threading.Thread):
         self.lock = threading.Lock()
         print(f"{Fore.GREEN}Connection from: {self.ip}:{self.port}")
         print(f"{Fore.GREEN}IP Connected: {self.ip}")
-        
+
         while True:
             try:
                 # waits for incoming messages from peers
@@ -147,12 +147,12 @@ class ClientThread(threading.Thread):
                             response = "search-user-not-online"
                             logging.info(f"{Fore.RED}Send to {self.ip}:{str(self.port)} -> {response}")
                             self.tcpClientSocket.send(response.encode())
-                    # enters if username does not exist 
+                    # enters if username does not exist
                     else:
                         response = "search-user-not-found"
                         logging.info(f"{Fore.RED}Send to {self.ip}:{str(self.port)} -> {response}")
                         self.tcpClientSocket.send(response.encode())
-                        
+
                 #  CHAT ROOM CREATION  #
                 elif message[0] == "CREATE_CHAT_ROOM":
                     if db.is_chat_room_exist(message[1]):
@@ -167,8 +167,8 @@ class ClientThread(threading.Thread):
                 #  CHAT ROOM JOINING  #
                 elif message[0] == "JOIN_CHAT_ROOM":
                     if db.is_chat_room_exist(message[1]):
-                        response = "chat-room-found" 
-                        logging.info(f"{Fore.RED}Send to {self.ip}:{str(self.port)} -> {response}") 
+                        response = "chat-room-found"
+                        logging.info(f"{Fore.RED}Send to {self.ip}:{str(self.port)} -> {response}")
                         response += " " + db.get_chat_room_participants(message[1])
                         self.tcpClientSocket.send(response.encode())
                         db.join_chat_room(message[1],message[2])
@@ -178,7 +178,7 @@ class ClientThread(threading.Thread):
                         self.tcpClientSocket.send(response.encode())
                 # CHAT ROOM LIST #
                 elif message[0] == "GET_CHAT_ROOM_LIST":
-                    response = "chat-room-list" 
+                    response = "chat-room-list"
                     response += " " + db.get_chat_room_participants(message[1])
                     self.tcpClientSocket.send(response.encode())
                 # CHAT ROOM QUITTING #
@@ -186,8 +186,8 @@ class ClientThread(threading.Thread):
                     response = "chat-room-quit" 
                     db.remove_chat_room_user(message[2],message[1])
                     self.tcpClientSocket.send(response.encode())
-                    
-                        
+
+
             except OSError as oErr:
                 logging.error(f"{Fore.RED}OSError: {oErr}")
 
@@ -196,7 +196,7 @@ class ClientThread(threading.Thread):
     def resetTimeout(self):
         self.udpServer.resetTimer()
 
-                            
+
 # implementation of the udp server thread for clients
 class UDPServer(threading.Thread):
 
@@ -208,7 +208,7 @@ class UDPServer(threading.Thread):
         # timer thread for the udp server is initialized
         self.timer = threading.Timer(3, self.waitHelloMessage)
         self.tcpClientSocket = clientSocket
-    
+
 
     # if hello message is not received before timeout
     # then peer is disconnected
@@ -220,11 +220,11 @@ class UDPServer(threading.Thread):
                 del tcpThreads[self.username]
         self.tcpClientSocket.close()
         print(f"Removed {Fore.RED}{self.username} from online peers")
-        
+
     def send_chatroom_users(self,room_name):
         return db.get_chat_room_participants(room_name)
-        
-        
+
+
 
 
     # resets the timer for udp server
@@ -236,10 +236,10 @@ class UDPServer(threading.Thread):
 
 # tcp and udp server port initializations
 print("Registy started...")
-port = 15600
-portUDP = 15500
+port = 15501
+portUDP = 15401
 
-# db initialization
+# db initialization:q
 db = db.DB()
 
 # gets the ip address of this peer
@@ -297,14 +297,14 @@ while inputs:
             message = message.decode().split()
             # checks if it is a hello message
             if message[0] == "HELLO":
-                # checks if the account that this hello message 
+                # checks if the account that this hello message
                 # is sent from is online
                 if message[1] in tcpThreads:
                     # resets the timeout for that peer since the hello message is received
                     tcpThreads[message[1]].resetTimeout()
                     print(f"Hello is received from {Fore.GREEN}{message[1]}")
                     logging.info(f"{Fore.GREEN}Received from {clientAddress[0]}:{str(clientAddress[1])} -> {' '.join(message)}")
-                    
+
 # registry tcp socket is closed
 tcpSocket.close()
 

@@ -185,7 +185,7 @@ class PeerServer(threading.Thread):
 # Client side of peer
 class PeerClient(threading.Thread):
     # variable initializations for the client side of the peer
-    def __init__(self, ipToConnect, portToConnect, username, peerServer, responseReceived,msg='None',receiver=None):
+    def __init__(self, ipToConnect, portToConnect, username, peerServer, responseReceived,msg=None,receiver=None):
         threading.Thread.__init__(self)
         # keeps the ip address of the peer that this will connect
         self.ipToConnect = ipToConnect
@@ -223,7 +223,7 @@ class PeerClient(threading.Thread):
         if self.msg is not None:
             requestMessage = "GROUP-CHAT " + self.username + " : " + self.msg + "\n" + f"{Fore.LIGHTBLUE_EX}{self.receiver}" + " : "
             self.tcpClientSocket.send(requestMessage.encode())
-        elif self.peerServer.isChatRequested == 0 and self.responseReceived is None:
+        if self.peerServer.isChatRequested == 0 and self.responseReceived is None and self.msg is None:
             # composes a request message and this is sent to server and then this waits a response message from the server this client connects
             requestMessage = "CHAT-REQUEST " + str(self.peerServer.peerServerPort)+ " " + self.username
             # logs the chat request sent to other peer
@@ -284,7 +284,7 @@ class PeerClient(threading.Thread):
                 self.tcpClientSocket.close()
         # if the client is created with OK message it means that this is the client of receiver side peer
         # so it sends an OK message to the requesting side peer server that it connects and then waits for the user inputs.
-        elif self.responseReceived == "OK":
+        elif self.responseReceived == "OK" and self.msg is None:
             # server status is changed
             self.peerServer.isChatRequested = 1
             # ok response is sent to the requester side
@@ -323,14 +323,14 @@ class peerMain:
         self.registryName = input("Enter IP address of registry: ")
         #self.registryName = 'localhost'
         # port number of the registry
-        self.registryPort = 15600
+        self.registryPort = 15501
         # tcp socket connection to registry
         self.tcpClientSocket = socket(AF_INET, SOCK_STREAM)
         self.tcpClientSocket.connect((self.registryName,self.registryPort))
         # initializes udp socket which is used to send hello messages
         self.udpClientSocket = socket(AF_INET, SOCK_DGRAM)
         # udp port of the registry
-        self.registryUDPPort = 15500
+        self.registryUDPPort = 15401
         # login info of the peer
         self.loginCredentials = (None, None)
         # online status of the peer
@@ -430,6 +430,7 @@ class peerMain:
                         for user in self.chatroomUsers:
                             if msg == ":q":
                                 self.quitChatRoom(username,chat_room_name)
+                                break
                             if user != username: # Don't send message to oneself.
                                 self.initiate_chat(user,msg)
             
@@ -522,7 +523,7 @@ class peerMain:
         response = self.tcpClientSocket.recv(1024).decode().split()
         logging.info(f"{Fore.GREEN}Received from  {self.registryName}   ->"  .join(response))
         if response[0] == "search-success":
-            if self.inChatroom is False:
+            if self.peerServer.inChatroom is False:
                 print(username + f"{Fore.GREEN} is found successfully...")
             return response[1]
         elif response[0] == "search-user-not-online":
